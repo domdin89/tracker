@@ -36,7 +36,7 @@
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted custom-text-title">Total Projects</h6>
                     <div class="d-flex align-items-center">
-                        <h3 class="mb-0">3</h3>
+                        <h3 class="mb-0">{{ projects|length }}</h3>
                         <div class="ms-auto">
                             <i class="fas fa-project-diagram fa-2x text-primary"></i>
                         </div>
@@ -51,7 +51,7 @@
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted custom-text-title">Total Tasks</h6>
                     <div class="d-flex align-items-center custom-text-title">
-                        <h3 class="mb-0">12</h3>
+                        <h3 class="mb-0">{{ total_tasks|default:"0" }}</h3>
                         <div class="ms-auto">
                             <i class="fas fa-tasks fa-2x text-success"></i>
                         </div>
@@ -67,7 +67,7 @@
                     <h6 class="card-subtitle mb-2 text-muted custom-text-title">Hours this week</h6>
                     <div class="d-flex align-items-center">
                         <h3 class="mb-0 custom-text-title">
-                            24.5
+                            {{ weekly_hours|default:"0" }}
                         </h3>
                         <div class="ms-auto">
                             <i class="fas fa-clock fa-2x text-info"></i>
@@ -84,7 +84,7 @@
                     <h6 class="card-subtitle mb-2 text-muted custom-text-title">Active Tasks</h6>
                     <div class="d-flex align-items-center">
                         <h3 class="mb-0">
-                            5
+                            {{ active_tasks|default:"0" }}
                         </h3>
                         <div class="ms-auto">
                             <i class="fas fa-play-circle fa-2x text-warning"></i>
@@ -107,25 +107,21 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    <div class="list-group">
-                        <a href="#" class="list-group-item list-group-item-action active" aria-current="true" onclick="loadProjectTasks('project1')">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">Web Development</h5>
-                                <small>7 tasks</small>
-                            </div>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="loadProjectTasks('project2')">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">Mobile App</h5>
-                                <small>3 tasks</small>
-                            </div>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="loadProjectTasks('project3')">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">Database Migration</h5>
-                                <small>2 tasks</small>
-                            </div>
-                        </a>
+                    <div class="list-group" id="projectsList">
+                        {% if projects %}
+                            {% for project in projects %}
+                                <a href="javascript:void(0);" class="list-group-item list-group-item-action {% if forloop.first %}active{% endif %}" 
+                                   data-project-id="{{ project.id }}"
+                                   onclick="loadProjectTasks('{{ project.id }}')">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ project.nome }}</h5>
+                                        <small>{{ project.tasks.count }} tasks</small>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-center text-muted mt-3">No projects found. Create your first project!</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -135,7 +131,7 @@
         <div class="col-md-7 mb-4">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 custom-text-title">Tasks - Web Development</h5>
+                    <h5 class="mb-0 custom-text-title" id="selectedProjectTitle">Tasks</h5>
                     <a href="#" class="btn btn-sm custom-button" data-bs-toggle="modal" data-bs-target="#newTaskModal">
                         <i class="fas fa-plus"></i> Add Task
                     </a>
@@ -152,46 +148,9 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tasksList">
                                 <tr>
-                                    <td>Setup project structure</td>
-                                    <td>15/04/2025 10:00</td>
-                                    <td>15/04/2025 12:30</td>
-                                    <td>2h 30m</td>
-                                    <td>
-                                        <a href="#" class="text-primary me-2" data-bs-toggle="modal" data-bs-target="#editTaskModal"><i class="fas fa-edit"></i></a>
-                                        <a href="#" class="text-danger"><i class="fas fa-trash"></i></a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Create database models</td>
-                                    <td>15/04/2025 14:00</td>
-                                    <td>15/04/2025 16:45</td>
-                                    <td>2h 45m</td>
-                                    <td>
-                                        <a href="#" class="text-primary me-2" data-bs-toggle="modal" data-bs-target="#editTaskModal"><i class="fas fa-edit"></i></a>
-                                        <a href="#" class="text-danger"><i class="fas fa-trash"></i></a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Implement user authentication</td>
-                                    <td>16/04/2025 09:15</td>
-                                    <td>16/04/2025 11:30</td>
-                                    <td>2h 15m</td>
-                                    <td>
-                                        <a href="#" class="text-primary me-2" data-bs-toggle="modal" data-bs-target="#editTaskModal"><i class="fas fa-edit"></i></a>
-                                        <a href="#" class="text-danger"><i class="fas fa-trash"></i></a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Design frontend components</td>
-                                    <td>16/04/2025 13:00</td>
-                                    <td>16/04/2025 17:00</td>
-                                    <td>4h 00m</td>
-                                    <td>
-                                        <a href="#" class="text-primary me-2" data-bs-toggle="modal" data-bs-target="#editTaskModal"><i class="fas fa-edit"></i></a>
-                                        <a href="#" class="text-danger"><i class="fas fa-trash"></i></a>
-                                    </td>
+                                    <td colspan="5" class="text-center">Select a project to view tasks</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -212,31 +171,32 @@
             </div>
             <div class="modal-body">
                 <form id="newTaskForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="taskProject" class="form-label custom-text">Project</label>
-                        <select class="form-select" id="taskProject" required>
-                            <option value="project1">Web Development</option>
-                            <option value="project2">Mobile App</option>
-                            <option value="project3">Database Migration</option>
+                        <select class="form-select" id="taskProject" name="project" required>
+                            {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.nome }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="taskDescription" class="form-label custom-text">Description</label>
-                        <textarea class="form-control" id="taskDescription" rows="3" required></textarea>
+                        <textarea class="form-control" id="taskDescription" name="description" rows="3" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="taskStartTime" class="form-label custom-text">Start Time</label>
-                        <input type="datetime-local" class="form-control" id="taskStartTime" required>
+                        <input type="datetime-local" class="form-control" id="taskStartTime" name="datetimeStart" required>
                     </div>
                     <div class="mb-3">
                         <label for="taskEndTime" class="form-label custom-text">End Time</label>
-                        <input type="datetime-local" class="form-control" id="taskEndTime" required>
+                        <input type="datetime-local" class="form-control" id="taskEndTime" name="datetimeEnd" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn custom-button">Create Task</button>
+                <button type="button" class="btn custom-button" id="createTaskBtn">Create Task</button>
             </div>
         </div>
     </div>
@@ -251,16 +211,17 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="newProjectForm">
+                <form id="newProjectForm" method="POST" action="{% url 'api:project_create' %}">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="projectName" class="form-label custom-text">Project Name</label>
-                        <input type="text" class="form-control" id="projectName" required>
+                        <input type="text" class="form-control" id="projectName" name="nome" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn custom-button">Create Project</button>
+                <button type="submit" form="newProjectForm" class="btn custom-button">Create Project</button>
             </div>
         </div>
     </div>
@@ -276,32 +237,34 @@
             </div>
             <div class="modal-body">
                 <form id="editTaskForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="editTaskId" name="id">
                     <div class="mb-3">
                         <label for="editTaskProject" class="form-label custom-text">Project</label>
-                        <select class="form-select" id="editTaskProject" required>
-                            <option value="project1">Web Development</option>
-                            <option value="project2">Mobile App</option>
-                            <option value="project3">Database Migration</option>
+                        <select class="form-select" id="editTaskProject" name="project" required>
+                            {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.nome }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="editTaskDescription" class="form-label custom-text">Description</label>
-                        <textarea class="form-control" id="editTaskDescription" rows="3" required>Setup project structure</textarea>
+                        <textarea class="form-control" id="editTaskDescription" name="description" rows="3" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="editTaskStartTime" class="form-label custom-text">Start Time</label>
-                        <input type="datetime-local" class="form-control" id="editTaskStartTime" value="2025-04-15T10:00" required>
+                        <input type="datetime-local" class="form-control" id="editTaskStartTime" name="datetimeStart" required>
                     </div>
                     <div class="mb-3">
                         <label for="editTaskEndTime" class="form-label custom-text">End Time</label>
-                        <input type="datetime-local" class="form-control" id="editTaskEndTime" value="2025-04-15T12:30" required>
+                        <input type="datetime-local" class="form-control" id="editTaskEndTime" name="datetimeEnd" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger me-2">Delete</button>
-                <button type="button" class="btn custom-button">Save Changes</button>
+                <button type="button" class="btn btn-danger me-2" id="deleteTaskBtn">Delete</button>
+                <button type="button" class="btn custom-button" id="saveTaskBtn">Save Changes</button>
             </div>
         </div>
     </div>
@@ -309,36 +272,17 @@
 
 {% block extra_js %}
 <script>
-    // Function to simulate loading project tasks
-    function loadProjectTasks(projectId) {
-        // In a real implementation, this would fetch tasks via API
-        const projectNames = {
-            'project1': 'Web Development',
-            'project2': 'Mobile App',
-            'project3': 'Database Migration'
-        };
-        
-        // Update header with selected project name
-        document.querySelector('.card-header h5').textContent = `Tasks - ${projectNames[projectId]}`;
-        
-        // Update active project in list
-        document.querySelectorAll('.list-group-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        event.currentTarget.classList.add('active');
-    }
-    
-    // Initialize date-time pickers with current date/time
+    // Inizializzazione date-time pickers
     document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
-        const later = new Date(now.getTime() + 60*60*1000); // 1 hour later
+        const later = new Date(now.getTime() + 60*60*1000); // 1 ora dopo
         
-        // Format for datetime-local input
+        // Formatta per input datetime-local
         const formatDatetime = (date) => {
             return date.toISOString().slice(0, 16);
         };
         
-        // Set default values for new task form
+        // Imposta i valori predefiniti per il form dei nuovi task
         const startInput = document.getElementById('taskStartTime');
         const endInput = document.getElementById('taskEndTime');
         if (startInput && endInput) {
@@ -346,6 +290,30 @@
             endInput.value = formatDatetime(later);
         }
     });
+    
+    // Funzione per selezionare un progetto e mostrare i suoi task
+    function loadProjectTasks(projectId) {
+        // Aggiorna la classe active nella lista dei progetti
+        document.querySelectorAll('#projectsList .list-group-item').forEach(item => {
+            if (item.getAttribute('data-project-id') === projectId) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Aggiorna l'intestazione della tabella con il nome del progetto selezionato
+        const projectName = document.querySelector(`[data-project-id="${projectId}"] h5`).textContent;
+        document.getElementById('selectedProjectTitle').textContent = `Tasks - ${projectName}`;
+        
+        // Qui dovrebbe esserci la logica per caricare i task, 
+        // ma per ora mostriamo un messaggio
+        document.getElementById('tasksList').innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center">Selezionato progetto: ${projectName}</td>
+            </tr>
+        `;
+    }
 </script>
 {% endblock %}
 {% endblock %}

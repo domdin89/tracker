@@ -10,7 +10,12 @@ app_name='api'
 
 urlpatterns = [
 
-    path('projects-page', projects_page, name='projects'),
+    #PROJECTS
+
+    path('projects', projects_page, name='projects'),
+    path('projects', project_create, name='project_create'),
+
+
     # path('tasks', task, name='tasks'),
     # path('tasks/<str:id>', name=task),
 
