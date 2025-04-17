@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12 custom-text-title">
+            <h2>Welcome, {{profile.first_name}} </h2>
+            <p class="text-muted custom-text-title">Plan: {{ profile.subscription.name }}</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3 custom-text-title">Quick actions</h5>
+                    <a href="{% url 'shortener:create_url' %}" class="btn me-2 custom-text-title custom-button">
+                        <i class="fas fa-link"></i> New short URL
+                    </a>
+                    <a href="{% url 'shortener:create_qr' %}" class="btn me-2 custom-text-title custom-button">
+                        <i class="fas fa-qrcode"></i> New QR Code
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <!-- Monthly URLs Stats -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted custom-text-title">URL this month</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0">{{ monthly_urls }}/{{ urls_limit }}</h3>
+                        <div class="ms-auto">
+                            <i class="fas fa-link fa-2x" style="fill: #496971;"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-3" style="height: 5px;">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ urls_percentage }}%; background: linear-gradient(45deg, #FF9E00, #FED401);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly QR Codes Stats -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted custom-text-title">QR Code this month</h6>
+                    <div class="d-flex align-items-center custom-text-title">
+                        <h3 class="mb-0">{{ monthly_qrs }}/{{ qrs_limit }}</h3>
+                        <div class="ms-auto">
+                            <i class="fas fa-qrcode fa-2x text-success"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-3" style="height: 5px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                            style="width: {{ urls_percentage }}%; background: linear-gradient(45deg, #FF9E00, #FED401);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Clicks -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted custom-text-title">Total clicks</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0 custom-text-title">
+                                {{ total_clicks }}
+                        </h3>
+                        <div class="ms-auto">
+                            <i class="fas fa-mouse-pointer fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remaining Days -->
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted custom-text-title">Days to reset</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0">
+                            {{ days_remaining }}
+                        </h3>
+                        <div class="ms-auto">
+                            <i class="fas fa-calendar fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Items -->
+    <div class="row">
+        <!-- Recent URLs -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent URLs</h5>
+                    <a href="{% url 'shortener:url_list' %}" class="btn btn-sm custom-button">
+                        Show All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Short URL</th>
+                                    <th>Click</th>
+                                    <th>Expiring</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for url in recent_urls %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url.get_short_url }}" target="_blank">
+                                            {{ url.short_code }}
+                                        </a>
+                                    </td>
+                                    <td>{{ url.clicks }}</td>
+                                    <td>
+                                        <span class="{% if url.is_valid %}text-success{% else %}text-danger{% endif %}">
+                                            {{ url.expires_at|date:"d/m/Y" }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">
+                                        0 URL created
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent QR Codes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent QR</h5>
+                    <a href="{% url 'shortener:qr_list' %}" class="btn btn-sm custom-button">
+                        Show all
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for qr in recent_qrs %}
+                        <div class="col-6 col-lg-4 mb-3">
+                            <div class="card">
+                                <img src="{{ qr.image.url }}" class="card-img-top" alt="QR Code">
+                                <div class="card-body p-2 text-center">
+                                    <small clas="text-muted">
+                                        Scans: {{ qr.scan_count }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center">
+                            <p>0 QR Code created</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Aggiorna i contatori ogni minuto
+    setInterval(function() {
+        // Qui puoi aggiungere una chiamata AJAX per aggiornare i contatori
+        // senza ricaricare la pagina
+    }, 60000);
+</script>
+{% endblock %}
+{% endblock %}

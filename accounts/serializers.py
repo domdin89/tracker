@@ -15,7 +15,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             profile = Profile.objects.get(user=user)
             token['profile_id'] = profile.id
         except Profile.DoesNotExist:
-            pass  # Handle the case if the profile is not found
+            pass
 
         return token
 

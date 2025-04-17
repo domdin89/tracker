@@ -1,117 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" >
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    <style>
-        body {
-            background-color: #f7f8fc;
-            font-family: 'Poppins', sans-serif;
-        }
+{% extends 'base.html' %}
 
-        .registration-container {
-            max-width: 400px;
-            margin: 7% auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center custom-text-title">Register</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="messages">
+                            {% for message in messages %}
+                                {% if message.tags == 'error' %}
+                                    <div class="alert alert-danger">
+                                        {{ message }}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
 
-        h6 {
-            margin-top: 20px;
-            font-weight: 600;
-        }
+                    <form method="POST"  action="{% url 'accounts:register' %}">
+                        {% csrf_token %}
+                        <div class="mb-3 custom-text">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <div class="form-text">Required. Only letters, numbers and @/./+/-/_</div>
+                        </div>
 
-        input[type="text"], input[type="password"], input[type="email"] {
-            padding: 10px;
-            width: 100%;
-            border: 1px solid #e1e1e1;
-            border-radius: 5px;
-            margin-top: 5px;
-        }
+                        <div class="mb-3 custom-text">
+                            <label for="username" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                          </div>
+  
+                          <div class="mb-3 custom-text">
+                            <label for="username" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                          </div>
+  
+                        <div class="mb-3 custom-text">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="mb-3 custom-text">
+                            <label for="password1" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password1" name="password1" required>
+                            <div class="form-text">
+                                Password must have at least 8 character
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 custom-text">
+                            <label for="password2" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="password2" name="password2" required>
+                        </div>
 
-        .hidePasswordEye {
-            position: absolute;
-            top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-            cursor: pointer;
-        }
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-lg custom-button">Register</button>
+                        </div>
+                    </form>
 
-        .submitButton {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            width: 100%;
-            font-weight: 600;
-            margin-top: 20px;
-        }
-
-        .submitButton:hover {
-            background-color: #0056b3;
-        }
-
-        .error-messages {
-            color: #dc3545;
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f8d7da;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container-fluid" x-data="{ toggle: true, toggle2: true }">
-    <div class="registration-container">
-        {% if messages %}
-        <div class="error-messages">
-            {% for message in messages %}
-                <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-            {% endfor %}
+                    <div class="text-center mt-3">
+                        <p>Have you already an account? <a href="{% url 'accounts:login_page' %}">Login</a></p>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
-        
-        <form method="post" action="{% url 'accounts:register' %}">
-            {% csrf_token %}       
-
-            <h6>Email</h6>
-            <input type="email" name="email" class="form-control" required>        
-
-            <h6>Username</h6>
-            <input type="text" name="username" class="form-control" required autocomplete="new-username">  
-
-            <h6>Nome</h6>
-            <input type="text" name="first_name" class="form-control" required autocomplete="new-name">  
-
-            <h6>Cognome</h6>
-            <input type="text" name="last_name" class="form-control" required autocomplete="new-last-name">  
-
-            <h6>Password (almeno di 8 caratteri)</h6>
-            <div style="position: relative;">
-                <input :type="toggle ? 'password' : 'text'" name="password1" class="form-control" required="" id="id_password">
-                <ion-icon class="hidePasswordEye" :name="toggle ? 'eye-outline' : 'eye-off-outline'" @click="toggle = !toggle"></ion-icon>
-            </div>
-
-            <h6>Conferma Password</h6>
-            <div style="position: relative;">
-                <input :type="toggle2 ? 'password' : 'text'" name="password2" class="form-control" required="" id="id_password_confirm">
-                <ion-icon class="hidePasswordEye" :name="toggle2 ? 'eye-outline' : 'eye-off-outline'" @click="toggle2 = !toggle2"></ion-icon>
-            </div>
-
-            <button type="submit" class="submitButton">Registrati</button>
-        </form>
-    </div>                     
+    </div>
 </div>
-
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js"></script>
-</body>
-</html>
+{% endblock %}

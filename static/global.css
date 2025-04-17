@@ -1,0 +1,29 @@
+.custom-button{
+    background: linear-gradient(45deg, #FF9E00, #FED401);
+    color: #384A4A; 
+    font-weight: 600;
+}
+
+.custom-button:hover{
+    background-color: #FED401; 
+    color: #384A4A; 
+    font-weight: 600;
+}
+
+.custom-text{
+    color: #384A4A; 
+    font-weight: 400;
+}
+
+.custom-text-title{
+    color: #384A4A; 
+    font-weight: 600;
+}
+
+.background{
+    background: linear-gradient(45deg, #FF9E00, #FED401);
+}
+
+.plans{
+    min-height: 55px;
+}
