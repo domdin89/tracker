@@ -13,7 +13,7 @@ urlpatterns = [
     #PROJECTS
 
     path('projects', projects_page, name='projects'),
-    path('projects', project_create, name='project_create'),
+    path('projects/new', project_create, name='project_create'),
 
 
     # path('tasks', task, name='tasks'),
