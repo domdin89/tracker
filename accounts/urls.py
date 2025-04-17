@@ -7,7 +7,11 @@ from .views import *
 
 app_name = 'accounts'
 urlpatterns = [
-    # path('login', views.CustomTokenObtainPairView.as_view()),
+    path('login', Login.as_view()),
+    path('register', register, name='register'),
+
+     path('login-page/', login_page, name='login_page'),
+    path('register-page/', register_page, name='register_page'),
     
 
     # path('register', views.register_user),
