@@ -1,5 +1,5 @@
 from django.shortcuts import render
 
 # Create your views here.
-def projects(request):
-    pass
+def projects_page(request):
+    return render(request, 'projects.html')
