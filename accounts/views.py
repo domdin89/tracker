@@ -30,6 +30,8 @@ from datetime import timedelta
 from .models import Profile
 from django.db import transaction
 from .models import Profile
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 
 
@@ -79,67 +81,75 @@ class Login(TokenObtainPairView):
             return render(request, 'auth/login.html')
         
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
+@transaction.atomic
 def register(request):
-
-    try:
-        # Estrai i dati dalla richiesta
-        username = f"user_{secrets.token_hex(4)}"
-        password = request.data.get('password')
-        email = request.data.get('email')
-        name = request.data.get('name')
-        surname = request.data.get('surname')
-        display_name = request.data.get('display_name')
-        mobile_number = request.data.get('mobile_number', None)
-        role = request.data.get('role', 'utente')
-
+    if request.method == 'POST':
+        # Ottieni i dati dal form con strip() per rimuovere spazi
+        username = request.POST.get('username', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
         
-        if User.objects.filter(email=email).exists():
-            return Response({
-                'message': 'Email già registrata.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+        if not all([username, email, password1, password2]):
+            messages.error(request, 'Tutti i campi contrassegnati sono obbligatori.')
+            return render(request, 'auth/register.html')
         
-        # Usa la transazione per assicurarti che entrambe le operazioni abbiano successo
-        with transaction.atomic():
+        # Validazione dell'email
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, 'Inserisci un indirizzo email valido.')
+            return render(request, 'auth/register.html')
             
-            # Crea l'utente Django
+        # Controllo se l'email è già in uso
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Questa email è già registrata.')
+            return render(request, 'auth/register.html')
+            
+        # Controllo se lo username è già in uso
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Questo username è già in uso.')
+            return render(request, 'auth/register.html')
+        
+        # Validazione password
+        if password1 != password2:
+            messages.error(request, 'Le password non coincidono.')
+            return render(request, 'auth/register.html')
+            
+        if len(password1) < 8:
+            messages.error(request, 'La password deve contenere almeno 8 caratteri.')
+            return render(request, 'auth/register.html')
+        
+        try:
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                password=password,
-                first_name=name,
-                last_name=surname
+                password=password1,
             )
-
-            # Crea un nuovo profilo se non esiste già
+            
+            # Crea il profilo associato
             profile = Profile.objects.create(
                 user=user,
-                name=name,
-                surname=surname,
-                display_name=display_name,
+                first_name=first_name,
+                last_name=last_name,
                 email=email,
-                mobile_number=mobile_number,
-                role=role,
                 is_active=True
             )
-            
-            # Gestione dell'immagine del profilo
-            if 'image' in request.FILES:
-                profile.image = request.FILES['image']
-                profile.save()
-            
-            return Response({
-                'message': 'Registrazione completata con successo.',
-                'user_id': user.id,
-                'profile_id': profile.id
-            }, status=status.HTTP_201_CREATED)
+
+            messages.success(request, 'Registrazione avvenuta con successo')
+            return render(request, 'auth/register_success.html')
                 
-    except Exception as e:
-        # Log dell'errore per debug
-        print(f"Errore durante la registrazione: {str(e)}")
-        return Response({
-            'message': f'Si è verificato un errore durante la registrazione: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+        except IntegrityError as e:
+            transaction.set_rollback(True)
+            messages.error(request, 'Si è verificato un errore con i dati inseriti. Riprova.')
+            return render(request, 'auth/register.html')
+        except Exception as e:
+            transaction.set_rollback(True)
+            messages.error(request, f'Si è verificato un errore durante la registrazione. Riprova più tardi.')
+            # Log dell'errore per il debug
+            print(f'Error during registration: {str(e)}')
+            return render(request, 'auth/register.html')
+            
+    return render(request, 'auth/register.html')

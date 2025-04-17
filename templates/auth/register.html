@@ -58,12 +58,27 @@
             background-color: #0056b3;
         }
 
+        .error-messages {
+            color: #dc3545;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8d7da;
+        }
     </style>
 </head>
 <body>
 
 <div class="container-fluid" x-data="{ toggle: true, toggle2: true }">
     <div class="registration-container">
+        {% if messages %}
+        <div class="error-messages">
+            {% for message in messages %}
+                <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         <form method="post" action="{% url 'accounts:register' %}">
             {% csrf_token %}       
 
@@ -79,15 +94,15 @@
             <h6>Cognome</h6>
             <input type="text" name="last_name" class="form-control" required autocomplete="new-last-name">  
 
-            <h6>Password</h6>
+            <h6>Password (almeno di 8 caratteri)</h6>
             <div style="position: relative;">
-                <input :type="toggle ? 'password' : 'text'" name="password" class="form-control" required="" id="id_password">
+                <input :type="toggle ? 'password' : 'text'" name="password1" class="form-control" required="" id="id_password">
                 <ion-icon class="hidePasswordEye" :name="toggle ? 'eye-outline' : 'eye-off-outline'" @click="toggle = !toggle"></ion-icon>
             </div>
 
             <h6>Conferma Password</h6>
             <div style="position: relative;">
-                <input :type="toggle2 ? 'password' : 'text'" name="password_confirm" class="form-control" required="" id="id_password_confirm">
+                <input :type="toggle2 ? 'password' : 'text'" name="password2" class="form-control" required="" id="id_password_confirm">
                 <ion-icon class="hidePasswordEye" :name="toggle2 ? 'eye-outline' : 'eye-off-outline'" @click="toggle2 = !toggle2"></ion-icon>
             </div>
 
