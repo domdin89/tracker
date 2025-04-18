@@ -1,15 +1,39 @@
-#!/usr/bin/env bash
-# start-server.sh
-# python3 manage.py runserver
+#!/bin/bash
+set -e
 
-python3 manage.py makemigrations
-python3 manage.py migrate --no-input
-python3 manage.py collectstatic --no-input --clear
+echo "Waiting for PostgreSQL..."
+while ! nc -z db 5432; do
+  sleep 0.1
+done
+echo "PostgreSQL started"
 
+echo "Applying migrations..."
+python manage.py makemigrations
+python manage.py migrate --no-input
 
-#gunicorn project.wsgi --bind 0.0.0.0:80 --max-requests 1000 --error-logfile error.log
-gunicorn tracker.wsgi --bind 0.0.0.0:80 \
-  --timeout 600 \
-  --workers 4 \
-  --max-requests 1000 \
-  --error-logfile error.log \
+echo "Collecting static files..."
+python manage.py collectstatic --no-input --clear
+
+if [ "$DJANGO_SUPERUSER_USERNAME" ] && [ "$DJANGO_SUPERUSER_PASSWORD" ] && [ "$DJANGO_SUPERUSER_EMAIL" ]; then
+    python manage.py createsuperuser \
+        --noinput \
+        --username $DJANGO_SUPERUSER_USERNAME \
+        --email $DJANGO_SUPERUSER_EMAIL || true
+fi
+
+# Start server
+echo "Starting server..."
+if [ "$DEBUG" = "True" ]; then
+    echo "Running in DEBUG mode..."
+    python manage.py runserver 0.0.0.0:80
+else
+    echo "Running in PRODUCTION mode..."
+    gunicorn tracker.wsgi:application \
+        --bind 0.0.0.0:80 \
+        --workers 4 \
+        --timeout 600 \
+        --error-logfile /app/logs/error.log \
+        --access-logfile /app/logs/access.log \
+        --capture-output \
+        --log-level info
+fi

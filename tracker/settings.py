@@ -143,3 +143,8 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True
 }
+
+
+LOGIN_URL = 'accounts:login_page'
+LOGIN_REDIRECT_URL = 'api:dashboard'
+LOGOUT_REDIRECT_URL = 'accounts:login_page'
