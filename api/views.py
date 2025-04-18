@@ -1,41 +1,40 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import Project, Task
-from django.db.models import Count, Sum, F, ExpressionWrapper, DurationField
-from django.db.models.functions import ExtractHour
+from django.db.models import Count, Sum
 from django.contrib import messages
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_datetime
 
 @login_required
 def projects_page(request):
+    
     projects = Project.objects.all()
     
-    # Recupera alcune statistiche per la dashboard
     total_tasks = Task.objects.filter(user=request.user).count()
     active_tasks = Task.objects.filter(user=request.user, is_active=True).count()
     
-    # Calculate weekly hours (tasks from the current week)
     current_date = timezone.now()
     start_of_week = current_date - timezone.timedelta(days=current_date.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_week = start_of_week + timezone.timedelta(days=7)
     
-    # Calculate duration using F expressions
     weekly_tasks = Task.objects.filter(
         user=request.user,
         datetimeStart__gte=start_of_week,
         datetimeEnd__lte=end_of_week
     )
     
-    # Calculate total hours from all weekly tasks
     weekly_hours = 0
     for task in weekly_tasks:
         duration = task.datetimeEnd - task.datetimeStart
-        weekly_hours += duration.total_seconds() / 3600  # Convert to hours
+        weekly_hours += duration.total_seconds() / 3600
     
-    weekly_hours = round(weekly_hours, 1)  # Round to 1 decimal place
+    weekly_hours = round(weekly_hours, 1)
     
     context = {
         'projects': projects,
@@ -56,8 +55,284 @@ def project_create(request):
     
     return redirect('api:projects')
 
-    """Genera un report aggregato dei task per progetto"""
-    # Ottieni i parametri dalla query
+
+
+@login_required
+def tasks_list(request):
+
+    start_datetime = request.GET.get('datetimeStart')
+    end_datetime = request.GET.get('datetimeEnd')
+    
+    if not start_datetime or not end_datetime:
+        messages.error(request, 'È necessario specificare entrambi i parametri datetimeStart e datetimeEnd')
+        return redirect('api:projects')
+    
+    try:
+        start_datetime = parse_datetime(start_datetime)
+        end_datetime = parse_datetime(end_datetime)
+    except (ValueError, TypeError):
+        messages.error(request, 'Formato datetime non valido. Utilizza il formato ISO 8601 (YYYY-MM-DDTHH:MM:SS)')
+        return redirect('api:projects')
+    
+    tasks = Task.objects.filter(
+        user=request.user,
+        datetimeStart__gte=start_datetime,
+        datetimeEnd__lte=end_datetime,
+        is_active=True
+    )
+    
+    projects = Project.objects.all()
+    
+    total_time = 0
+    for task in tasks:
+        duration = task.datetimeEnd - task.datetimeStart
+        total_time += duration.total_seconds()
+    
+    total_hours = round(total_time / 3600, 2)
+    
+    context = {
+        'tasks': tasks,
+        'projects': projects,
+        'total_hours': total_hours,
+        'start_date': start_datetime,
+        'end_date': end_datetime,
+        'total_tasks': tasks.count(),
+        'active_tasks': tasks.filter(is_active=True).count()
+    }
+    
+    return render(request, 'tasks.html', context)
+
+
+@login_required
+def tasks_for_project(request, project_id):
+    
+    if not project_id:
+        return JsonResponse({'error': 'Project ID is required'}, status=400)
+    
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found'}, status=404)
+    
+    tasks = Task.objects.filter(
+        project=project,
+        user=request.user
+    ).order_by('-datetimeStart')
+    
+    tasks_data = []
+    for task in tasks:
+        duration = task.datetimeEnd - task.datetimeStart
+        hours = int(duration.total_seconds() // 3600)
+        minutes = int((duration.total_seconds() % 3600) // 60)
+        duration_str = f"{hours}h {minutes}m"
+        
+        tasks_data.append({
+            'id': task.id,
+            'description': task.description,
+            'datetimeStart': task.datetimeStart.isoformat(),
+            'datetimeEnd': task.datetimeEnd.isoformat(),
+            'duration': duration_str,
+            'is_active': task.is_active,
+            'project': project.id
+        })
+    
+    return JsonResponse({
+        'tasks': tasks_data,
+        'project': {
+            'id': project.id,
+            'nome': project.nome
+        }
+    })
+
+@login_required
+def task_detail(request, task_id):
+    
+    try:
+        task = Task.objects.get(id=task_id, user=request.user)
+    except Task.DoesNotExist:
+        messages.error(request, 'Task non trovato')
+        return redirect('api:projects')
+    
+    project = task.project
+    
+    duration = task.datetimeEnd - task.datetimeStart
+    hours = int(duration.total_seconds() // 3600)
+    minutes = int((duration.total_seconds() % 3600) // 60)
+    
+    context = {
+        'task': task,
+        'project': project,
+        'hours': hours,
+        'minutes': minutes,
+        'projects': Project.objects.all()  # Per la navigazione
+    }
+    
+    return render(request, 'task_detail.html', context)
+
+@login_required
+def tasks_for_project(request, project_id):
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found'}, status=404)
+    
+    # Filter tasks by project and user
+    tasks = Task.objects.filter(
+        project=project,
+        user=request.user
+    ).order_by('-datetimeStart') 
+    
+    tasks_data = []
+    for task in tasks:
+        duration = task.datetimeEnd - task.datetimeStart
+        hours = int(duration.total_seconds() // 3600)
+        minutes = int((duration.total_seconds() % 3600) // 60)
+        duration_str = f"{hours}h {minutes}m"
+        
+        tasks_data.append({
+            'id': task.id,
+            'description': task.description,
+            'datetimeStart': task.datetimeStart.isoformat(),
+            'datetimeEnd': task.datetimeEnd.isoformat(),
+            'duration': duration_str,
+            'is_active': task.is_active,
+            'project': project.id
+        })
+    
+    return JsonResponse({
+        'tasks': tasks_data,
+        'project': {
+            'id': project.id,
+            'nome': project.nome
+        }
+    })
+
+@login_required
+def task_create(request):
+    if request.method != 'POST':
+        return redirect('api:projects')
+    
+    project_id = request.POST.get('project')
+    description = request.POST.get('description')
+    datetime_start_str = request.POST.get('datetimeStart')
+    datetime_end_str = request.POST.get('datetimeEnd')
+    
+    if not all([project_id, description, datetime_start_str, datetime_end_str]):
+        messages.error(request, 'Tutti i campi sono obbligatori')
+        return redirect('api:projects')
+    
+    # Ottieni il progetto
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        messages.error(request, 'Progetto non trovato')
+        return redirect('api:projects')
+    except ValueError:
+        messages.error(request, 'ID progetto non valido')
+        return redirect('api:projects')
+    
+    try:
+        datetime_start = parse_datetime(datetime_start_str)
+        datetime_end = parse_datetime(datetime_end_str)
+        
+        if datetime_start is None or datetime_end is None:
+            raise ValueError("Parsing datetime ha prodotto None")
+            
+        if datetime_end <= datetime_start:
+            messages.error(request, 'La data di fine deve essere successiva alla data di inizio')
+            return redirect('api:projects')
+    except Exception as e:
+        messages.error(request, f'Formato datetime non valido: {str(e)}')
+        return redirect('api:projects')
+    
+    # Crea il task
+    Task.objects.create(
+        project=project,
+        user=request.user,
+        description=description,
+        datetimeStart=datetime_start,
+        datetimeEnd=datetime_end,
+        is_active=True
+    )
+    
+    messages.success(request, 'Task creato con successo')
+    return redirect('api:projects')
+
+@login_required
+def task_update(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id, user=request.user)
+    except Task.DoesNotExist:
+        messages.error(request, 'Task non trovato')
+        return redirect('api:projects')
+    
+    project_id = request.POST.get('project')
+    description = request.POST.get('description')
+    datetime_start_str = request.POST.get('datetimeStart')
+    datetime_end_str = request.POST.get('datetimeEnd')
+    is_active = request.POST.get('is_active') == 'on'
+    
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id)
+            task.project = project
+        except Project.DoesNotExist:
+            messages.error(request, 'Progetto non trovato')
+            return redirect('api:task_update', task_id=task_id)
+        except ValueError:
+            messages.error(request, 'ID progetto non valido')
+            return redirect('api:task_update', task_id=task_id)
+    
+    if description:
+        task.description = description
+    
+    if datetime_start_str:
+        try:
+            task.datetimeStart = parse_datetime(datetime_start_str)
+            if task.datetimeStart is None:
+                raise ValueError("Parsing datetime ha prodotto None")
+        except Exception as e:
+            messages.error(request, f'Formato start datetime non valido: {str(e)}')
+            return redirect('api:task_update', task_id=task_id)
+    
+    if datetime_end_str:
+        try:
+            task.datetimeEnd = parse_datetime(datetime_end_str)
+            if task.datetimeEnd is None:
+                raise ValueError("Parsing datetime ha prodotto None")
+        except Exception as e:
+            messages.error(request, f'Formato end datetime non valido: {str(e)}')
+            return redirect('api:task_update', task_id=task_id)
+    
+    if task.datetimeEnd <= task.datetimeStart:
+        messages.error(request, 'La data di fine deve essere successiva alla data di inizio')
+        return redirect('api:task_update', task_id=task_id)
+    
+    
+    # Salva modifiche
+    task.save()
+    
+    messages.success(request, 'Task aggiornato con successo')
+    return redirect('api:projects')
+
+@login_required
+def task_delete(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id, user=request.user)
+    except Task.DoesNotExist:
+        messages.error(request, 'Task non trovato')
+        return redirect('api:projects')
+    
+    # Elimina il task
+    task.is_active = False
+    task.save()
+    
+    messages.success(request, f'Task eliminato con successo')
+    return redirect('api:projects')
+
+@login_required
+def generate_report(request):
+    
     start_date_str = request.GET.get('datetimeStart')
     end_date_str = request.GET.get('datetimeEnd')
     
@@ -67,9 +342,9 @@ def project_create(request):
         start_date = end_date - timedelta(days=30)
     else:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
-        except ValueError:
+            start_date = parse_datetime(start_date_str)
+            end_date = parse_datetime(end_date_str)
+        except (ValueError, TypeError):
             messages.error(request, 'Formato date non valido')
             return redirect('api:projects')
     
@@ -102,63 +377,10 @@ def project_create(request):
     context = {
         'projects': Project.objects.all(),
         'project_hours': list(project_hours.values()),
-        'start_date': start_date.strftime('%Y-%m-%dT%H:%M'),
-        'end_date': end_date.strftime('%Y-%m-%dT%H:%M'),
+        'start_date': start_date,
+        'end_date': end_date,
         'total_tasks': Task.objects.filter(user=request.user).count(),
         'active_tasks': Task.objects.filter(user=request.user, is_active=True).count()
     }
     
-    return render(request, 'projects.html', context)
-    """Visualizza il report dei task raggruppati per progetto"""
-    # Ottieni i parametri dalla query
-    start_date_str = request.GET.get('datetimeStart')
-    end_date_str = request.GET.get('datetimeEnd')
-    
-    # Se non sono fornite date, usa ultimi 30 giorni
-    if not start_date_str or not end_date_str:
-        end_date = timezone.now()
-        start_date = end_date - timedelta(days=30)
-    else:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
-        except ValueError:
-            messages.error(request, 'Formato date non valido')
-            return redirect('api:projects')
-    
-    # Filtra i task per l'intervallo di date
-    tasks = Task.objects.filter(
-        user=request.user,
-        datetimeStart__gte=start_date,
-        datetimeEnd__lte=end_date
-    )
-    
-    # Raggruppa i task per progetto
-    projects_data = {}
-    for task in tasks:
-        project_id = str(task.project.id)
-        project_name = task.project.nome
-        
-        if project_id not in projects_data:
-            projects_data[project_id] = {
-                'name': project_name,
-                'total_seconds': 0,
-                'total_hours': 0,
-                'tasks_count': 0
-            }
-        
-        duration = task.datetimeEnd - task.datetimeStart
-        projects_data[project_id]['total_seconds'] += duration.total_seconds()
-        projects_data[project_id]['tasks_count'] += 1
-    
-    # Converti i secondi in ore
-    for project_id, data in projects_data.items():
-        data['total_hours'] = round(data['total_seconds'] / 3600, 2)
-    
-    context = {
-        'projects_data': projects_data.values(),
-        'start_date': start_date,
-        'end_date': end_date
-    }
-    
-    return render(request, 'projects.html', context)
+    return render(request, 'report.html', context)

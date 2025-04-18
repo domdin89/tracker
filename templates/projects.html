@@ -110,9 +110,8 @@
                     <div class="list-group" id="projectsList">
                         {% if projects %}
                             {% for project in projects %}
-                                <a href="javascript:void(0);" class="list-group-item list-group-item-action {% if forloop.first %}active{% endif %}" 
-                                   data-project-id="{{ project.id }}"
-                                   onclick="loadProjectTasks('{{ project.id }}')">
+                                <a href="{% url 'api:tasks' %}?project_id={{ project.id }}" class="list-group-item list-group-item-action {% if forloop.first %}active{% endif %}" 
+                                   data-project-id="{{ project.id }}">
                                     <div class="d-flex w-100 justify-content-between">
                                         <h5 class="mb-1">{{ project.nome }}</h5>
                                         <small>{{ project.tasks.count }} tasks</small>
@@ -170,7 +169,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="newTaskForm">
+                <form id="newTaskForm" method="POST" action="{% url 'api:task_create' %}">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="taskProject" class="form-label custom-text">Project</label>
@@ -192,11 +191,11 @@
                         <label for="taskEndTime" class="form-label custom-text">End Time</label>
                         <input type="datetime-local" class="form-control" id="taskEndTime" name="datetimeEnd" required>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn custom-button">Create Task</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn custom-button" id="createTaskBtn">Create Task</button>
             </div>
         </div>
     </div>
@@ -217,11 +216,11 @@
                         <label for="projectName" class="form-label custom-text">Project Name</label>
                         <input type="text" class="form-control" id="projectName" name="nome" required>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn custom-button">Create Project</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="newProjectForm" class="btn custom-button">Create Project</button>
             </div>
         </div>
     </div>
@@ -236,7 +235,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="editTaskForm">
+                <form id="editTaskForm" method="POST" action="">
                     {% csrf_token %}
                     <input type="hidden" id="editTaskId" name="id">
                     <div class="mb-3">
@@ -259,12 +258,12 @@
                         <label for="editTaskEndTime" class="form-label custom-text">End Time</label>
                         <input type="datetime-local" class="form-control" id="editTaskEndTime" name="datetimeEnd" required>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <a href="" class="btn btn-danger me-2" id="deleteTaskBtn">Delete</a>
+                        <button type="submit" class="btn custom-button">Save Changes</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger me-2" id="deleteTaskBtn">Delete</button>
-                <button type="button" class="btn custom-button" id="saveTaskBtn">Save Changes</button>
             </div>
         </div>
     </div>
@@ -272,48 +271,108 @@
 
 {% block extra_js %}
 <script>
-    // Inizializzazione date-time pickers
-    document.addEventListener('DOMContentLoaded', function() {
-        const now = new Date();
-        const later = new Date(now.getTime() + 60*60*1000); // 1 ora dopo
+ // Inizializzazione date-time pickers
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    const later = new Date(now.getTime() + 60*60*1000); // 1 ora dopo
+    
+    // Formatta per input datetime-local
+    const formatDatetime = (date) => {
+        return date.toISOString().slice(0, 16);
+    };
+    
+    // Imposta i valori predefiniti per il form dei nuovi task
+    const startInput = document.getElementById('taskStartTime');
+    const endInput = document.getElementById('taskEndTime');
+    if (startInput && endInput) {
+        startInput.value = formatDatetime(now);
+        endInput.value = formatDatetime(later);
+    }
+    
+        document.getElementById('editTaskModal').addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const taskId = button.getAttribute('data-task-id');
+        const form = document.getElementById('editTaskForm');
         
-        // Formatta per input datetime-local
-        const formatDatetime = (date) => {
-            return date.toISOString().slice(0, 16);
-        };
+        document.getElementById('editTaskId').value = taskId;
+        form.action = `/tasks/${taskId}/update`; // Remove /api/ prefix and trailing slash
         
-        // Imposta i valori predefiniti per il form dei nuovi task
-        const startInput = document.getElementById('taskStartTime');
-        const endInput = document.getElementById('taskEndTime');
-        if (startInput && endInput) {
-            startInput.value = formatDatetime(now);
-            endInput.value = formatDatetime(later);
-        }
+        // Configura il link di eliminazione
+        document.getElementById('deleteTaskBtn').href = `/tasks/${taskId}/delete`; // Remove /api/ prefix
+        
+        fetch(`/tasks/${taskId}`) // Remove /api/ prefix
+            .then(response => response.json())
+            .then(task => {
+                document.getElementById('editTaskProject').value = task.project;
+                document.getElementById('editTaskDescription').value = task.description;
+                document.getElementById('editTaskStartTime').value = task.datetimeStart.slice(0, 16);
+                document.getElementById('editTaskEndTime').value = task.datetimeEnd.slice(0, 16);
+            })
+            .catch(error => {
+                console.error('Errore nel caricamento dei dati del task:', error);
+            });
     });
     
-    // Funzione per selezionare un progetto e mostrare i suoi task
-    function loadProjectTasks(projectId) {
-        // Aggiorna la classe active nella lista dei progetti
-        document.querySelectorAll('#projectsList .list-group-item').forEach(item => {
-            if (item.getAttribute('data-project-id') === projectId) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
+    const projectLinks = document.querySelectorAll('#projectsList .list-group-item');
+    projectLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Aggiorna la classe active
+            projectLinks.forEach(item => item.classList.remove('active'));
+            this.classList.add('active');
+            
+            const projectId = this.getAttribute('data-project-id');
+            const projectName = this.querySelector('h5').textContent;
+            
+            // Aggiorna il titolo della tabella
+            document.getElementById('selectedProjectTitle').textContent = `Tasks - ${projectName}`;
+            
+            // Pre-seleziona il progetto nel form di creazione task
+            document.getElementById('taskProject').value = projectId;
+            
+            // Carica i task del progetto
+            fetch(`/tasks/project/${projectId}`)
+                .then(response => response.json())
+                .then(data => {
+                    let html = '';
+                    if (data.tasks && data.tasks.length > 0) {
+                        data.tasks.forEach(task => {
+                            html += `
+                            <tr>
+                                <td>${task.description}</td>
+                                <td>${task.datetimeStart.substring(0, 16).replace('T', ' ')}</td>
+                                <td>${task.datetimeEnd.substring(0, 16).replace('T', ' ')}</td>
+                                <td>${task.duration}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                            data-bs-target="#editTaskModal" data-task-id="${task.id}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                        });
+                    } else {
+                        html = '<tr><td colspan="5" class="text-center">No tasks found for this project</td></tr>';
+                    }
+                    document.getElementById('tasksList').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading tasks:', error);
+                    document.getElementById('tasksList').innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">Error loading tasks</td>
+                        </tr>
+                    `;
+                });
         });
-        
-        // Aggiorna l'intestazione della tabella con il nome del progetto selezionato
-        const projectName = document.querySelector(`[data-project-id="${projectId}"] h5`).textContent;
-        document.getElementById('selectedProjectTitle').textContent = `Tasks - ${projectName}`;
-        
-        // Qui dovrebbe esserci la logica per caricare i task, 
-        // ma per ora mostriamo un messaggio
-        document.getElementById('tasksList').innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center">Selezionato progetto: ${projectName}</td>
-            </tr>
-        `;
+    });
+    
+    // Seleziona il primo progetto all'avvio se disponibile
+    if (projectLinks.length > 0) {
+        projectLinks[0].click();
     }
+});
 </script>
 {% endblock %}
 {% endblock %}
