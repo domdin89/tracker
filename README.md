@@ -29,7 +29,7 @@ Un'applicazione basata su Django per il tracciamento del tempo dedicato a proget
    cp .env.template .env
    ```
 
-3. Modifica il file `.env` con le tue impostazioni preferite.
+3. Modifica il file `#env` con le tue impostazioni preferite e cambialo in `.env`.
 
 4. Costruisci e avvia i container Docker:
    ```bash
